@@ -11,6 +11,7 @@ from .forms import PostForm
 class PostCreateView(CreateView):
     model = Post
     form_class = PostForm
+    fields = ('title', 'text', 'category', 'location', 'pub_date')
     template_name = 'blog/create.html'
     success_url = reverse_lazy('blog:index')
 
