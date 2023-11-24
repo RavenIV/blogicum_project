@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from django.shortcuts import get_object_or_404, render
-from django.views.generic import CreateView
+from django.views.generic import CreateView, TemplateView
 from django.urls import reverse_lazy
 
 from .models import Category, Post
@@ -11,12 +11,13 @@ from .forms import PostForm
 class PostCreateView(CreateView):
     model = Post
     form_class = PostForm
-    fields = ('title', 'text', 'category', 'location', 'pub_date')
     template_name = 'blog/create.html'
-    success_url = reverse_lazy('blog:index')
+    success_url = reverse_lazy('blog:profile', ) # включить username
 
-    # Перенаправить на страницу профиля: 
-    # success_url = reverse_lazy(')
+
+class ProfileView(TemplateView):
+    template_name = 'blog/profile.html'
+
 
 
 def filter_published_posts(posts):
