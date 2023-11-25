@@ -1,11 +1,13 @@
 from datetime import datetime
+from typing import Any
 
 from django.core.paginator import Paginator
 from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db import models
 from django.shortcuts import get_object_or_404, render
-from django.views.generic import CreateView, DetailView, ListView, TemplateView, UpdateView
-from django.urls import reverse
+from django.views.generic import CreateView, DeleteView, DetailView, ListView, TemplateView, UpdateView
+from django.urls import reverse, reverse_lazy
 
 from .models import Category, Post
 from .forms import PostForm
@@ -35,9 +37,27 @@ class PostUpdateView(LoginRequiredMixin, UpdateView):
     template_name = 'blog/create.html'
 
     def dispatch(self, request, *args, **kwargs):
-        get_object_or_404(User, username=request.user)
+        get_object_or_404(Post, pk=kwargs['post_id'], author=request.user)
         return super().dispatch(request, *args, **kwargs)
     
+
+class PostDeleteView(LoginRequiredMixin, DeleteView):
+    model = Post
+    template_name = 'blog/create.html'
+    success_url = reverse_lazy('blog:index')
+    
+    def dispatch(self, request, *args, **kwargs):
+        get_object_or_404(Post, pk=kwargs['post_id'], author=request.user)
+        return super().dispatch(request, *args, **kwargs)
+    
+
+class PostDetailView(DetailView):
+    model = Post
+    template_name = 'blog/detail.html'
+    
+    def get_object(self):
+        return get_object_or_404(Post, pk=self.kwargs['post_id'])
+
 
 def profile(request, username):
     profile = get_object_or_404(User, username=username)
@@ -91,13 +111,13 @@ def index(request):
     })
 
 
-def post_detail(request, post_id):
-    return render(request, 'blog/detail.html', {
-        'post': get_object_or_404(
-            filter_published_posts(Post.objects),
-            pk=post_id,
-        )
-    })
+# def post_detail(request, post_id):
+#     return render(request, 'blog/detail.html', {
+#         'post': get_object_or_404(
+#             filter_published_posts(Post.objects),
+#             pk=post_id,
+#         )
+#     })
 
 
 def category_posts(request, category_slug):

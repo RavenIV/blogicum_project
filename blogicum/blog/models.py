@@ -107,3 +107,4 @@ class Post(PublishedModel):
     
     def get_absolute_url(self):
         return reverse('blog:post_detail', kwargs={'post_id': self.pk})
+    
