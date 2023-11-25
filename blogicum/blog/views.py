@@ -1,23 +1,43 @@
 from datetime import datetime
 
+from django.contrib.auth import get_user_model
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import get_object_or_404, render
 from django.views.generic import CreateView, TemplateView
-from django.urls import reverse_lazy
+from django.urls import reverse
 
 from .models import Category, Post
 from .forms import PostForm
 
 
-class PostCreateView(CreateView):
+User = get_user_model()
+
+
+class PostCreateView(LoginRequiredMixin, CreateView):
     model = Post
     form_class = PostForm
     template_name = 'blog/create.html'
-    success_url = reverse_lazy('blog:profile', ) # включить username
 
+    def form_valid(self, form):
+        form.instance.author = self.request.user
+        return super().form_valid(form)
+    
+    def get_success_url(self):
+        return reverse('blog:profile', kwargs={
+            'username': self.request.user
+        })
+    
 
-class ProfileView(TemplateView):
+class ProfileView(LoginRequiredMixin, TemplateView):
     template_name = 'blog/profile.html'
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['profile'] = get_object_or_404(
+            User, 
+            username=self.request.user
+        )
+        return context
 
 
 def filter_published_posts(posts):
