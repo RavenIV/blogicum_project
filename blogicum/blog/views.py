@@ -1,18 +1,14 @@
 from datetime import datetime
-from typing import Any
-from django import http
 
+from django.core.paginator import Paginator
 from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db import models
-from django.http.response import HttpResponse
 from django.shortcuts import get_object_or_404, render
-from django.views.generic import CreateView, TemplateView, UpdateView
+from django.views.generic import CreateView, DetailView, ListView, TemplateView, UpdateView
 from django.urls import reverse
 
 from .models import Category, Post
 from .forms import PostForm
-from users.forms import CustomUserCreationForm
 
 
 User = get_user_model()
@@ -31,21 +27,25 @@ class PostCreateView(LoginRequiredMixin, CreateView):
         return reverse('blog:profile', kwargs={
             'username': self.request.user
         })
-    
-
-class ProfileView(LoginRequiredMixin, TemplateView):
-    template_name = 'blog/profile.html'
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['profile'] = get_object_or_404(
-            User, 
-            username=self.request.user
-        )
-        return context
 
 
-class ProfileUpdateView(LoginRequiredMixin, UpdateView):
+def profile(request, username):
+    profile = get_object_or_404(User, username=username)
+
+    if profile == request.user:
+        posts = profile.posts.all()
+    else:
+        posts = filter_published_posts(profile.posts)
+
+    return render(request, 'blog/profile.html', {
+        'profile': profile,
+        'page_obj': Paginator(posts, 10).get_page(
+            request.GET.get('page')
+        ),
+    })
+
+
+class UserUpdateView(LoginRequiredMixin, UpdateView):
     model = User
     fields = ('username', 'first_name', 'last_name', 'email')
     template_name = 'blog/user.html'
