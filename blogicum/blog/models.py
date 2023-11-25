@@ -108,3 +108,19 @@ class Post(PublishedModel):
     def get_absolute_url(self):
         return reverse('blog:post_detail', kwargs={'post_id': self.pk})
     
+
+class Comment(models.Model):
+    text = models.TextField('Комментарий', max_length=250)
+    post = models.ForeignKey(
+        Post,
+        on_delete=models.CASCADE
+    )
+    created_at = models.DateTimeField('Добавлено', auto_now_add=True)
+    author = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE
+    )
+
+    class Meta:
+        ordering = ('created_at',)
+        default_related_name = 'comments'

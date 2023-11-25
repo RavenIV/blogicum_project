@@ -17,6 +17,7 @@ User = get_user_model()
 
 
 class PostCreateView(LoginRequiredMixin, CreateView):
+    """Создать публикацию."""
     model = Post
     form_class = PostForm
     template_name = 'blog/create.html'
@@ -32,6 +33,7 @@ class PostCreateView(LoginRequiredMixin, CreateView):
 
 
 class PostUpdateView(LoginRequiredMixin, UpdateView):
+    """Редактировать публикацию, проверив авторство."""
     model = Post
     form_class = PostForm
     template_name = 'blog/create.html'
@@ -42,6 +44,7 @@ class PostUpdateView(LoginRequiredMixin, UpdateView):
     
 
 class PostDeleteView(LoginRequiredMixin, DeleteView):
+    """Удалить публикацию, проверив авторство."""
     model = Post
     template_name = 'blog/create.html'
     success_url = reverse_lazy('blog:index')
@@ -52,6 +55,7 @@ class PostDeleteView(LoginRequiredMixin, DeleteView):
     
 
 class PostDetailView(DetailView):
+    """Посмотреть конкретную публикацию."""
     model = Post
     template_name = 'blog/detail.html'
     
@@ -109,15 +113,6 @@ def index(request):
     return render(request, 'blog/index.html', {
         'post_list': filter_published_posts(Post.objects)[:5]
     })
-
-
-# def post_detail(request, post_id):
-#     return render(request, 'blog/detail.html', {
-#         'post': get_object_or_404(
-#             filter_published_posts(Post.objects),
-#             pk=post_id,
-#         )
-#     })
 
 
 def category_posts(request, category_slug):
