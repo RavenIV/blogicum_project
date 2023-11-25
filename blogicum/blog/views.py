@@ -1,13 +1,18 @@
 from datetime import datetime
+from typing import Any
+from django import http
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db import models
+from django.http.response import HttpResponse
 from django.shortcuts import get_object_or_404, render
-from django.views.generic import CreateView, TemplateView
+from django.views.generic import CreateView, TemplateView, UpdateView
 from django.urls import reverse
 
 from .models import Category, Post
 from .forms import PostForm
+from users.forms import CustomUserCreationForm
 
 
 User = get_user_model()
@@ -38,6 +43,25 @@ class ProfileView(LoginRequiredMixin, TemplateView):
             username=self.request.user
         )
         return context
+
+
+class ProfileUpdateView(LoginRequiredMixin, UpdateView):
+    model = User
+    fields = ('username', 'first_name', 'last_name', 'email')
+    template_name = 'blog/user.html'
+
+    def get_object(self):
+        return User.objects.get(username=self.request.user)
+
+    def dispatch(self, request, *args, **kwargs):
+        get_object_or_404(User, username=request.user)
+        return super().dispatch(request, *args, **kwargs)
+    
+    def get_success_url(self):
+        return reverse('blog:profile', kwargs={
+            'username': self.request.user
+        })
+
 
 
 def filter_published_posts(posts):
