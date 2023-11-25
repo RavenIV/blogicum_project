@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.db import models
+from django.urls import reverse
 
 
 User = get_user_model()
@@ -81,6 +82,11 @@ class Post(PublishedModel):
         null=True,
         verbose_name='Категория',
     )
+    image = models.ImageField(
+        'Фото',
+        upload_to='post_images',
+        blank=True
+    )
 
     class Meta:
         verbose_name = 'публикация'
@@ -98,3 +104,6 @@ class Post(PublishedModel):
             f'{self.location=}, '
             f'{self.category=}'
         )
+    
+    def get_absolute_url(self):
+        return reverse('blog:post_detail', kwargs={'post_id': self.pk})

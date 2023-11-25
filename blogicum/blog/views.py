@@ -29,6 +29,16 @@ class PostCreateView(LoginRequiredMixin, CreateView):
         })
 
 
+class PostUpdateView(LoginRequiredMixin, UpdateView):
+    model = Post
+    form_class = PostForm
+    template_name = 'blog/create.html'
+
+    def dispatch(self, request, *args, **kwargs):
+        get_object_or_404(User, username=request.user)
+        return super().dispatch(request, *args, **kwargs)
+    
+
 def profile(request, username):
     profile = get_object_or_404(User, username=username)
 
