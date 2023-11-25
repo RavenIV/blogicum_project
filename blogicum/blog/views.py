@@ -3,14 +3,15 @@ from typing import Any
 
 from django.core.paginator import Paginator
 from django.contrib.auth import get_user_model
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import models
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, render, redirect
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, TemplateView, UpdateView
 from django.urls import reverse, reverse_lazy
 
-from .models import Category, Post
-from .forms import PostForm
+from .models import Category, Post, Comment
+from .forms import PostForm, CommentForm
 
 
 User = get_user_model()
@@ -61,6 +62,13 @@ class PostDetailView(DetailView):
     
     def get_object(self):
         return get_object_or_404(Post, pk=self.kwargs['post_id'])
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['form'] = CommentForm()
+        context['comments'] = self.object.comments.select_related('author')
+        return context
+
 
 
 def profile(request, username):
@@ -125,3 +133,15 @@ def category_posts(request, category_slug):
         'category': category,
         'post_list': filter_published_posts(category.posts)
     })
+
+
+@login_required
+def add_comment(request, pk):
+    post = get_object_or_404(filter_published_posts(Post.objects), pk=pk)
+    form = CommentForm(request.POST)
+    if form.is_valid:
+        comment = form.save(commit=False)
+        comment.author = request.user
+        comment.post = post
+        comment.save()
+    return redirect('blog:post_detail', pk=pk)
