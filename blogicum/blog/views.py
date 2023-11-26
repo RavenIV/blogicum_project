@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import Any
+from django import http
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
@@ -53,20 +54,25 @@ class CategoryView(ValidPostsMixin, ListView):
 
     template_name = 'blog/category.html'
     paginate_by = 10
+    category = None
 
-    def get_queryset(self):
-        queryset = super().get_queryset()
-        return queryset.filter(
-            category__slug=self.kwargs.get('category_slug')
-        )
-    
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['category'] = get_object_or_404(
+    def dispatch(self, request, *args: Any, **kwargs: Any):
+        self.category = get_object_or_404(
             Category, 
             is_published=True, 
             slug=self.kwargs.get('category_slug')
         )
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        return queryset.filter(
+            category__slug=self.category.slug
+        )
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['category'] = self.category
         return context
     
 
@@ -76,22 +82,28 @@ class ProfileView(ValidPostsMixin, ListView):
     Если это страница пользователя, показать все его посты.
     """
 
+    profile = None
     template_name = 'blog/profile.html'
     paginate_by = 10
 
-    def get_queryset(self):
-        profile = get_object_or_404(
+    def dispatch(self, request, *args, **kwargs):
+        self.profile = get_object_or_404(
             User, username=self.kwargs.get('username')
         )
-        if profile == self.request.user:
-            return User.objects.get(username=profile.username).posts.select_related('category', 'location')
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_queryset(self):
+        if self.profile == self.request.user:
+            return User.objects.get(
+                username=self.profile.username
+            ).posts.select_related('category', 'location')
         else:
             queryset = super().get_queryset()
-            return queryset.filter(author__username=profile.username)
+            return queryset.filter(author__username=self.profile.username)
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['profile'] = get_object_or_404(User, username=self.kwargs.get('username'))
+        context['profile'] = self.profile
         return context
 
 
@@ -191,3 +203,6 @@ def add_comment(request, pk):
         comment.post = post
         comment.save()
     return redirect('blog:post_detail', pk=pk)
+
+class CommentCreateView(LoginRequiredMixin, CreateView):
+    ...
