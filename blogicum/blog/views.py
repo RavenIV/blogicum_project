@@ -1,13 +1,9 @@
 from datetime import datetime
 from typing import Any
-from django import http
 
-from django.core.paginator import Paginator
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db import models
-from django.db.models.query import QuerySet
 from django.shortcuts import get_object_or_404, render, redirect
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, TemplateView, UpdateView
 from django.views.generic.list import MultipleObjectMixin
@@ -18,6 +14,7 @@ from .forms import PostForm, CommentForm
 
 
 User = get_user_model()
+
 
 def filter_published_posts(posts):
     return (
@@ -30,32 +27,52 @@ def filter_published_posts(posts):
     )
 
 
-class IndexView(ListView):
-    """Показать ленту опубликованных постов."""
+class ValidPostsMixin:
     model = Post
-    template_name = 'blog/index.html'
     paginate_by = 10
 
     def get_queryset(self):
-        return filter_published_posts(Post.objects)
-
-
-class CategoryDetailView(DetailView, MultipleObjectMixin):
-    """Показать опубликованные посты конкретной категории."""
-    queryset = Category.objects.filter(is_published=True)
-    slug_url_kwarg = 'category_slug'
-    template_name = 'blog/category.html'
-    paginate_by = 10
-
-    def get_context_data(self, **kwargs):
-        object_list = filter_published_posts(self.get_object().posts)
-        return super(CategoryDetailView, self).get_context_data(
-            object_list=object_list, **kwargs
+        self.queryset = Post.objects.select_related(
+            'location', 'category', 'author'
+        ).filter(
+            is_published=True,
+            pub_date__lte=datetime.now(),
+            category__is_published=True
         )
+        return super().get_queryset()
+    
+
+
+class IndexView(ValidPostsMixin, ListView):
+    """Показать ленту опубликованных постов."""
+
+    template_name = 'blog/index.html'
+
+
+class CategoryView(ValidPostsMixin, ListView):
+    """Показать опубликованные посты конкретной категории."""
+
+    template_name = 'blog/category.html'
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        return queryset.filter(
+            category__slug=self.kwargs.get('category_slug')
+        )
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['category'] = get_object_or_404(
+            Category, 
+            is_published=True, 
+            slug=self.kwargs.get('category_slug')
+        )
+        return context
     
 
 class PostDetailView(DetailView):
     """Посмотреть конкретную публикацию и комментарии к ней."""
+
     # model = Post
     queryset = filter_published_posts(Post.objects)
     template_name = 'blog/detail.html'
@@ -94,7 +111,11 @@ class PostCreateView(LoginRequiredMixin, CreateView):
 
 
 class PostUpdateView(LoginRequiredMixin, UpdateView):
-    """Редактировать публикацию, проверив авторство."""
+    """
+    Редактировать публикацию. Если пользователь - не автор, 
+    перенаправить на страницу публикации.
+    """
+
     model = Post
     form_class = PostForm
     template_name = 'blog/create.html'
@@ -109,6 +130,7 @@ class PostUpdateView(LoginRequiredMixin, UpdateView):
 
 class PostDeleteView(LoginRequiredMixin, DeleteView):
     """Удалить публикацию, проверив авторство."""
+
     model = Post
     template_name = 'blog/create.html'
     success_url = reverse_lazy('blog:index')
@@ -120,6 +142,7 @@ class PostDeleteView(LoginRequiredMixin, DeleteView):
 
 class ProfileDetailView(DetailView, MultipleObjectMixin):
     """Показать профиль пользователя."""
+
     model = User
     slug_field = 'username'
     slug_url_kwarg = 'username'
@@ -141,6 +164,7 @@ class ProfileDetailView(DetailView, MultipleObjectMixin):
 
 class UserUpdateView(LoginRequiredMixin, UpdateView):
     """Редактировать данные пользователя."""
+
     model = User
     fields = ('username', 'first_name', 'last_name', 'email')
     template_name = 'blog/user.html'
