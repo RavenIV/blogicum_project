@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import Any
+from django import http
 
 from django.core.paginator import Paginator
 from django.contrib.auth import get_user_model
@@ -53,6 +54,65 @@ class CategoryDetailView(DetailView, MultipleObjectMixin):
         )
     
 
+class PostDetailView(DetailView):
+    """Посмотреть конкретную публикацию и комментарии к ней."""
+    # model = Post
+    queryset = filter_published_posts(Post.objects)
+    template_name = 'blog/detail.html'
+    pk_url_kwarg = 'post_id'
+
+    # Показать страницу неопубликованного поста его автору.
+    # def get_object(self):
+    #     if super().get_object().author == self.request.user:
+    #         return super().get_object()
+    #     return get_object_or_404(
+    #         filter_published_posts(Post.objects),
+    #         pk=self.kwargs['post_id']
+    #     )
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['form'] = CommentForm()
+        context['comments'] = self.object.comments.select_related('author')
+        return context
+
+
+# def profile(request, username):
+#     profile = get_object_or_404(User, username=username)
+
+#     if profile == request.user:
+#         posts = profile.posts.all()
+#     else:
+#         posts = filter_published_posts(profile.posts)
+
+#     return render(request, 'blog/profile.html', {
+#         'profile': profile,
+#         'page_obj': Paginator(posts, 10).get_page(
+#             request.GET.get('page')
+#         ),
+#     })
+
+
+class ProfileDetailView(DetailView, MultipleObjectMixin):
+    model = User
+    slug_field = 'username'
+    slug_url_kwarg = 'username'
+    template_name = 'blog/profile.html'
+    paginate_by = 10
+
+    def get_context_data(self, **kwargs):
+        if self.get_object() == self.request.user:
+            object_list = self.get_object().posts.all()
+        else:
+            object_list = filter_published_posts(self.get_object().posts)
+        return super(ProfileDetailView, self).get_context_data(
+            object_list=object_list, **kwargs
+        )
+
+
+
+
+
 
 class PostCreateView(LoginRequiredMixin, CreateView):
     """Создать публикацию."""
@@ -92,34 +152,9 @@ class PostDeleteView(LoginRequiredMixin, DeleteView):
         return super().dispatch(request, *args, **kwargs)
     
 
-class PostDetailView(DetailView):
-    """Посмотреть конкретную публикацию."""
-    model = Post
-    template_name = 'blog/detail.html'
-    pk_url_kwarg = 'post_id'
-    
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['form'] = CommentForm()
-        context['comments'] = self.object.comments.select_related('author')
-        return context
 
 
 
-def profile(request, username):
-    profile = get_object_or_404(User, username=username)
-
-    if profile == request.user:
-        posts = profile.posts.all()
-    else:
-        posts = filter_published_posts(profile.posts)
-
-    return render(request, 'blog/profile.html', {
-        'profile': profile,
-        'page_obj': Paginator(posts, 10).get_page(
-            request.GET.get('page')
-        ),
-    })
 
 
 class UserUpdateView(LoginRequiredMixin, UpdateView):
