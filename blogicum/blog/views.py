@@ -5,6 +5,7 @@ from django import http
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.http.response import HttpResponse
 from django.shortcuts import get_object_or_404, render, redirect
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, TemplateView, UpdateView
 from django.views.generic.list import MultipleObjectMixin
@@ -48,6 +49,7 @@ class IndexView(ValidPostsMixin, ListView):
 
     template_name = 'blog/index.html'
     paginate_by = 10
+
 
 class CategoryView(ValidPostsMixin, ListView):
     """Показать опубликованные посты конкретной категории."""
@@ -186,23 +188,54 @@ class UserUpdateView(LoginRequiredMixin, UpdateView):
         })
 
 
-
-
-
-
-
-
-
-@login_required
-def add_comment(request, pk):
-    post = get_object_or_404(filter_published_posts(Post.objects), pk=pk)
-    form = CommentForm(request.POST)
-    if form.is_valid:
-        comment = form.save(commit=False)
-        comment.author = request.user
-        comment.post = post
-        comment.save()
-    return redirect('blog:post_detail', pk=pk)
-
 class CommentCreateView(LoginRequiredMixin, CreateView):
-    ...
+    model = Comment
+    fields = ('text',)
+    post_to_comment = None
+
+    def dispatch(self, request, *args, **kwargs) -> HttpResponse:
+        self.post_to_comment = get_object_or_404(filter_published_posts(Post.objects), pk=self.kwargs.get('post_id'))
+        return super().dispatch(request, *args, **kwargs)
+    
+    def form_valid(self, form):
+        form.instance.author = self.request.user
+        form.instance.post = self.post_to_comment
+        return super().form_valid(form)
+    
+    def get_success_url(self):
+        return reverse('blog:post_detail', kwargs={'post_id': self.post_to_comment.pk})
+
+
+
+class CommentUpdateView(LoginRequiredMixin, UpdateView):
+    model = Comment
+    fields = ('text',)
+    pk_url_kwarg = 'comment_id'
+    post_to_comment = None
+    template_name = 'blog/comment.html'
+
+    def dispatch(self, request, *args, **kwargs) -> HttpResponse:
+        self.post_to_comment = get_object_or_404(filter_published_posts(Post.objects), pk=self.kwargs.get('post_id'))
+        return super().dispatch(request, *args, **kwargs)
+    
+    def form_valid(self, form):
+        form.instance.author = self.request.user
+        form.instance.post = self.post_to_comment
+        return super().form_valid(form)
+    
+    def get_success_url(self):
+        return reverse('blog:post_detail', kwargs={'post_id': self.post_to_comment.pk})
+    
+
+class CommentDeleteView(LoginRequiredMixin, DeleteView):
+    model = Comment
+    pk_url_kwarg = 'comment_id'
+    template_name = 'blog/comment.html'
+    post_to_comment = None
+
+    def dispatch(self, request, *args, **kwargs) -> HttpResponse:
+        self.post_to_comment = get_object_or_404(filter_published_posts(Post.objects), pk=self.kwargs.get('post_id'))
+        return super().dispatch(request, *args, **kwargs)
+    
+    def get_success_url(self):
+        return reverse('blog:post_detail', kwargs={'post_id': self.post_to_comment.pk})
