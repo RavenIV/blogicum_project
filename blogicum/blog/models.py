@@ -33,7 +33,7 @@ class Location(PublishedModel):
         verbose_name_plural = 'Местоположения'
 
     def __str__(self):
-        return self.name
+        return self.name[:30]
 
 
 class Category(PublishedModel):
@@ -53,7 +53,7 @@ class Category(PublishedModel):
         verbose_name_plural = 'Категории'
 
     def __str__(self):
-        return self.title
+        return self.title[:30]
 
 
 class Post(PublishedModel):
@@ -99,7 +99,7 @@ class Post(PublishedModel):
             f'{super().__str__()}, '
             f'{self.title=:.30}, '
             f'{self.text=:.15}..., '
-            f'{self.pub_date=:%d.%m.%Y %H:%M:%S}, '
+            f'{self.pub_date=}, '
             f'{self.author=}, '
             f'{self.location=}, '
             f'{self.category=}'

@@ -77,43 +77,6 @@ class PostDetailView(DetailView):
         return context
 
 
-# def profile(request, username):
-#     profile = get_object_or_404(User, username=username)
-
-#     if profile == request.user:
-#         posts = profile.posts.all()
-#     else:
-#         posts = filter_published_posts(profile.posts)
-
-#     return render(request, 'blog/profile.html', {
-#         'profile': profile,
-#         'page_obj': Paginator(posts, 10).get_page(
-#             request.GET.get('page')
-#         ),
-#     })
-
-
-class ProfileDetailView(DetailView, MultipleObjectMixin):
-    model = User
-    slug_field = 'username'
-    slug_url_kwarg = 'username'
-    template_name = 'blog/profile.html'
-    paginate_by = 10
-
-    def get_context_data(self, **kwargs):
-        if self.get_object() == self.request.user:
-            object_list = self.get_object().posts.all()
-        else:
-            object_list = filter_published_posts(self.get_object().posts)
-        return super(ProfileDetailView, self).get_context_data(
-            object_list=object_list, **kwargs
-        )
-
-
-
-
-
-
 class PostCreateView(LoginRequiredMixin, CreateView):
     """Создать публикацию."""
     model = Post
@@ -135,9 +98,12 @@ class PostUpdateView(LoginRequiredMixin, UpdateView):
     model = Post
     form_class = PostForm
     template_name = 'blog/create.html'
+    pk_url_kwarg = 'post_id'
 
     def dispatch(self, request, *args, **kwargs):
-        get_object_or_404(Post, pk=kwargs['post_id'], author=request.user)
+        instance = get_object_or_404(Post, pk=kwargs['post_id'])
+        if instance.author != request.user:
+            return redirect('blog:post_detail', post_id=instance.pk)
         return super().dispatch(request, *args, **kwargs)
     
 
@@ -152,12 +118,29 @@ class PostDeleteView(LoginRequiredMixin, DeleteView):
         return super().dispatch(request, *args, **kwargs)
     
 
+class ProfileDetailView(DetailView, MultipleObjectMixin):
+    """Показать профиль пользователя."""
+    model = User
+    slug_field = 'username'
+    slug_url_kwarg = 'username'
+    template_name = 'blog/profile.html'
+    paginate_by = 10
+    context_object_name = 'profile'
 
-
-
+    def get_context_data(self, **kwargs):
+        
+        if self.get_object() == self.request.user:
+            object_list = self.get_object().posts.all()
+        else:
+            object_list = filter_published_posts(self.get_object().posts)
+        
+        return super(ProfileDetailView, self).get_context_data(
+            object_list=object_list, **kwargs
+        )
 
 
 class UserUpdateView(LoginRequiredMixin, UpdateView):
+    """Редактировать данные пользователя."""
     model = User
     fields = ('username', 'first_name', 'last_name', 'email')
     template_name = 'blog/user.html'
