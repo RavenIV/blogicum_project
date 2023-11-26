@@ -96,9 +96,7 @@ class PostDetailView(DetailView):
     """Посмотреть конкретную публикацию."""
     model = Post
     template_name = 'blog/detail.html'
-    
-    def get_object(self):
-        return get_object_or_404(Post, pk=self.kwargs['post_id'])
+    pk_url_kwarg = 'post_id'
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
