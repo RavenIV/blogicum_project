@@ -9,6 +9,7 @@ from django.db import models
 from django.db.models.query import QuerySet
 from django.shortcuts import get_object_or_404, render, redirect
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, TemplateView, UpdateView
+from django.views.generic.list import MultipleObjectMixin
 from django.urls import reverse, reverse_lazy
 
 from .models import Category, Post, Comment
@@ -36,6 +37,21 @@ class IndexView(ListView):
 
     def get_queryset(self):
         return filter_published_posts(Post.objects)
+
+
+class CategoryDetailView(DetailView, MultipleObjectMixin):
+    """Показать опубликованные посты конкретной категории."""
+    queryset = Category.objects.filter(is_published=True)
+    slug_url_kwarg = 'category_slug'
+    template_name = 'blog/category.html'
+    paginate_by = 10
+
+    def get_context_data(self, **kwargs):
+        object_list = filter_published_posts(self.get_object().posts)
+        return super(CategoryDetailView, self).get_context_data(
+            object_list=object_list, **kwargs
+        )
+    
 
 
 class PostCreateView(LoginRequiredMixin, CreateView):
@@ -130,16 +146,7 @@ class UserUpdateView(LoginRequiredMixin, UpdateView):
 
 
 
-def category_posts(request, category_slug):
-    category = get_object_or_404(
-        Category,
-        is_published=True,
-        slug=category_slug
-    )
-    return render(request, 'blog/category.html', {
-        'category': category,
-        'post_list': filter_published_posts(category.posts)
-    })
+
 
 
 @login_required
