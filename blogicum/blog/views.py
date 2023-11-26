@@ -6,6 +6,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import models
+from django.db.models.query import QuerySet
 from django.shortcuts import get_object_or_404, render, redirect
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, TemplateView, UpdateView
 from django.urls import reverse, reverse_lazy
@@ -15,6 +16,26 @@ from .forms import PostForm, CommentForm
 
 
 User = get_user_model()
+
+def filter_published_posts(posts):
+    return (
+        posts.select_related('location', 'category', 'author')
+        .filter(
+            is_published=True,
+            pub_date__lte=datetime.now(),
+            category__is_published=True
+        )
+    )
+
+
+class IndexView(ListView):
+    """Показать ленту опубликованных постов."""
+    model = Post
+    template_name = 'blog/index.html'
+    paginate_by = 10
+
+    def get_queryset(self):
+        return filter_published_posts(Post.objects)
 
 
 class PostCreateView(LoginRequiredMixin, CreateView):
@@ -106,21 +127,7 @@ class UserUpdateView(LoginRequiredMixin, UpdateView):
 
 
 
-def filter_published_posts(posts):
-    return (
-        posts.select_related('location', 'category', 'author')
-        .filter(
-            is_published=True,
-            pub_date__lte=datetime.now(),
-            category__is_published=True
-        )
-    )
 
-
-def index(request):
-    return render(request, 'blog/index.html', {
-        'post_list': filter_published_posts(Post.objects)[:5]
-    })
 
 
 def category_posts(request, category_slug):

@@ -16,5 +16,5 @@ urlpatterns = [
     ),
     path('profile/<username>/', views.profile, name='profile'),
     path('edit_profile/', views.UserUpdateView.as_view(), name='edit_profile'),
-    path('', views.index, name='index'),
+    path('', views.IndexView.as_view(), name='index'),
 ]
