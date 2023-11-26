@@ -28,13 +28,12 @@ def filter_published_posts(posts):
 
 
 class ValidPostsMixin:
-    model = Post
-    paginate_by = 10
+    queryset = Post.objects.prefetch_related(
+        'location', 'category', 'author'
+    )
 
     def get_queryset(self):
-        self.queryset = Post.objects.select_related(
-            'location', 'category', 'author'
-        ).filter(
+        self.queryset = self.queryset.filter(
             is_published=True,
             pub_date__lte=datetime.now(),
             category__is_published=True
@@ -47,12 +46,13 @@ class IndexView(ValidPostsMixin, ListView):
     """Показать ленту опубликованных постов."""
 
     template_name = 'blog/index.html'
-
+    paginate_by = 10
 
 class CategoryView(ValidPostsMixin, ListView):
     """Показать опубликованные посты конкретной категории."""
 
     template_name = 'blog/category.html'
+    paginate_by = 10
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -70,23 +70,37 @@ class CategoryView(ValidPostsMixin, ListView):
         return context
     
 
-class PostDetailView(DetailView):
+class ProfileView(ValidPostsMixin, ListView):
+    """
+    Показать профиль автора и его опубликованные посты.
+    Если это страница пользователя, показать все его посты.
+    """
+
+    template_name = 'blog/profile.html'
+    paginate_by = 10
+
+    def get_queryset(self):
+        profile = get_object_or_404(
+            User, username=self.kwargs.get('username')
+        )
+        if profile == self.request.user:
+            return User.objects.get(username=profile.username).posts.select_related('category', 'location')
+        else:
+            queryset = super().get_queryset()
+            return queryset.filter(author__username=profile.username)
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['profile'] = get_object_or_404(User, username=self.kwargs.get('username'))
+        return context
+
+
+class PostDetailView(ValidPostsMixin, DetailView):
     """Посмотреть конкретную публикацию и комментарии к ней."""
 
-    # model = Post
-    queryset = filter_published_posts(Post.objects)
     template_name = 'blog/detail.html'
     pk_url_kwarg = 'post_id'
 
-    # Показать страницу неопубликованного поста его автору.
-    # def get_object(self):
-    #     if super().get_object().author == self.request.user:
-    #         return super().get_object()
-    #     return get_object_or_404(
-    #         filter_published_posts(Post.objects),
-    #         pk=self.kwargs['post_id']
-    #     )
-    
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['form'] = CommentForm()
@@ -139,28 +153,6 @@ class PostDeleteView(LoginRequiredMixin, DeleteView):
         get_object_or_404(Post, pk=kwargs['post_id'], author=request.user)
         return super().dispatch(request, *args, **kwargs)
     
-
-class ProfileDetailView(DetailView, MultipleObjectMixin):
-    """Показать профиль пользователя."""
-
-    model = User
-    slug_field = 'username'
-    slug_url_kwarg = 'username'
-    template_name = 'blog/profile.html'
-    paginate_by = 10
-    context_object_name = 'profile'
-
-    def get_context_data(self, **kwargs):
-        
-        if self.get_object() == self.request.user:
-            object_list = self.get_object().posts.all()
-        else:
-            object_list = filter_published_posts(self.get_object().posts)
-        
-        return super(ProfileDetailView, self).get_context_data(
-            object_list=object_list, **kwargs
-        )
-
 
 class UserUpdateView(LoginRequiredMixin, UpdateView):
     """Редактировать данные пользователя."""
