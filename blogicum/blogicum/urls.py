@@ -16,12 +16,12 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('auth/', include('django.contrib.auth.urls')),
     path(
-        'auth/registration/', 
+        'auth/registration/',
         CreateView.as_view(
             form_class=UserSignUpForm,
             template_name='registration/registration_form.html',
             success_url=reverse_lazy('blog:index')
-        ), 
+        ),
         name='registration'
     ),
     path('', include('blog.urls', namespace='blog')),
@@ -30,4 +30,7 @@ urlpatterns = [
 if settings.DEBUG:
     import debug_toolbar
     urlpatterns += (path('__debug__/', include(debug_toolbar.urls)),)
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    urlpatterns += static(
+        settings.MEDIA_URL,
+        document_root=settings.MEDIA_ROOT
+    )

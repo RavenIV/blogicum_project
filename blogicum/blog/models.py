@@ -21,7 +21,7 @@ class PublishedModel(models.Model):
         return (
             f'{self.pk=}, '
             f'{self.is_published=}, '
-            f'{self.created_at=:%d.%m.%Y %H:%M:%S}'
+            f'{self.created_at=}'
         )
 
 
@@ -104,10 +104,10 @@ class Post(PublishedModel):
             f'{self.location=}, '
             f'{self.category=}'
         )
-    
+
     def get_absolute_url(self):
         return reverse('blog:post_detail', kwargs={'post_id': self.pk})
-    
+
 
 class Comment(models.Model):
     text = models.TextField('Комментарий', max_length=250)
