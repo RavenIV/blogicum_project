@@ -1,5 +1,7 @@
 from datetime import datetime
+from typing import Any
 
+from django.db.models import Count
 from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http.response import HttpResponse
@@ -26,16 +28,13 @@ def filter_published_posts(posts):
 
 
 class ValidPostsMixin:
-    queryset = Post.objects.prefetch_related(
-        'location', 'category', 'author'
-    )
+    model = Post
+    ordering = ('-pub_date',)
 
     def get_queryset(self):
-        self.queryset = self.queryset.filter(
-            is_published=True,
-            pub_date__lte=datetime.now(),
-            category__is_published=True
-        )
+        self.queryset = filter_published_posts(
+            Post.objects
+        ).annotate(comment_count=Count('comments'))
         return super().get_queryset()
     
 
@@ -149,7 +148,7 @@ class PostUpdateView(LoginRequiredMixin, UpdateView):
     def dispatch(self, request, *args, **kwargs):
         instance = get_object_or_404(Post, pk=kwargs['post_id'])
         if instance.author != request.user:
-            return redirect('blog:post_detail', post_id=instance.pk)
+            return redirect(instance)
         return super().dispatch(request, *args, **kwargs)
     
 
@@ -173,11 +172,7 @@ class UserUpdateView(LoginRequiredMixin, UpdateView):
     template_name = 'blog/user.html'
 
     def get_object(self):
-        return User.objects.get(username=self.request.user)
-
-    def dispatch(self, request, *args, **kwargs):
-        get_object_or_404(User, username=request.user)
-        return super().dispatch(request, *args, **kwargs)
+        return get_object_or_404(User, username=self.request.user)
     
     def get_success_url(self):
         return reverse('blog:profile', kwargs={
@@ -185,7 +180,7 @@ class UserUpdateView(LoginRequiredMixin, UpdateView):
         })
 
 
-class CommentMixin:
+class CommentMixin(LoginRequiredMixin):
     model = Comment
     post_to_comment = None
 
@@ -197,34 +192,34 @@ class CommentMixin:
         return super().dispatch(request, *args, **kwargs)
     
     def get_success_url(self):
-        return reverse('blog:post_detail', kwargs={'post_id': self.post_to_comment.pk})
+        return reverse('blog:post_detail', kwargs={
+            'post_id': self.post_to_comment.pk
+        })
     
 
-class CommentCreateView(LoginRequiredMixin, CommentMixin, CreateView):
+class CommentFormValidMixin(CommentMixin):
+    fields = ('text',)
+
+    def form_valid(self, form):
+        form.instance.author = self.request.user
+        form.instance.post = self.post_to_comment
+        return super().form_valid(form)
+
+
+class CommentCreateView(CommentFormValidMixin, CreateView):
     """Написать комментарий к публикации."""
 
-    fields = ('text',)
-    
-    def form_valid(self, form):
-        form.instance.author = self.request.user
-        form.instance.post = self.post_to_comment
-        return super().form_valid(form)
+    template_name = 'blog/detail.html'
 
 
-class CommentUpdateView(LoginRequiredMixin, CommentMixin, UpdateView):
+class CommentUpdateView(CommentFormValidMixin, UpdateView):
     """Редактировать комментарий к публикации."""
-
-    fields = ('text',)
+    
     pk_url_kwarg = 'comment_id'
     template_name = 'blog/comment.html'
-    
-    def form_valid(self, form):
-        form.instance.author = self.request.user
-        form.instance.post = self.post_to_comment
-        return super().form_valid(form)
 
 
-class CommentDeleteView(LoginRequiredMixin, CommentMixin, DeleteView):
+class CommentDeleteView(CommentMixin, DeleteView):
     """Удалить комментарий к публикации."""
 
     pk_url_kwarg = 'comment_id'
