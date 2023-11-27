@@ -1,14 +1,10 @@
 from datetime import datetime
-from typing import Any
-from django import http
 
 from django.contrib.auth import get_user_model
-from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http.response import HttpResponse
-from django.shortcuts import get_object_or_404, render, redirect
-from django.views.generic import CreateView, DeleteView, DetailView, ListView, TemplateView, UpdateView
-from django.views.generic.list import MultipleObjectMixin
+from django.shortcuts import get_object_or_404, redirect
+from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
 from django.urls import reverse, reverse_lazy
 
 from .models import Category, Post, Comment
@@ -58,7 +54,7 @@ class CategoryView(ValidPostsMixin, ListView):
     paginate_by = 10
     category = None
 
-    def dispatch(self, request, *args: Any, **kwargs: Any):
+    def dispatch(self, request, *args, **kwargs):
         self.category = get_object_or_404(
             Category, 
             is_published=True, 
@@ -124,6 +120,7 @@ class PostDetailView(ValidPostsMixin, DetailView):
 
 class PostCreateView(LoginRequiredMixin, CreateView):
     """Создать публикацию."""
+    
     model = Post
     form_class = PostForm
     template_name = 'blog/create.html'
@@ -188,54 +185,47 @@ class UserUpdateView(LoginRequiredMixin, UpdateView):
         })
 
 
-class CommentCreateView(LoginRequiredMixin, CreateView):
+class CommentMixin:
     model = Comment
-    fields = ('text',)
     post_to_comment = None
 
     def dispatch(self, request, *args, **kwargs) -> HttpResponse:
-        self.post_to_comment = get_object_or_404(filter_published_posts(Post.objects), pk=self.kwargs.get('post_id'))
+        self.post_to_comment = get_object_or_404(
+            filter_published_posts(Post.objects),
+            pk=self.kwargs.get('post_id')
+        )
         return super().dispatch(request, *args, **kwargs)
+    
+    def get_success_url(self):
+        return reverse('blog:post_detail', kwargs={'post_id': self.post_to_comment.pk})
+    
+
+class CommentCreateView(LoginRequiredMixin, CommentMixin, CreateView):
+    """Написать комментарий к публикации."""
+
+    fields = ('text',)
     
     def form_valid(self, form):
         form.instance.author = self.request.user
         form.instance.post = self.post_to_comment
         return super().form_valid(form)
-    
-    def get_success_url(self):
-        return reverse('blog:post_detail', kwargs={'post_id': self.post_to_comment.pk})
 
 
+class CommentUpdateView(LoginRequiredMixin, CommentMixin, UpdateView):
+    """Редактировать комментарий к публикации."""
 
-class CommentUpdateView(LoginRequiredMixin, UpdateView):
-    model = Comment
     fields = ('text',)
     pk_url_kwarg = 'comment_id'
-    post_to_comment = None
     template_name = 'blog/comment.html'
-
-    def dispatch(self, request, *args, **kwargs) -> HttpResponse:
-        self.post_to_comment = get_object_or_404(filter_published_posts(Post.objects), pk=self.kwargs.get('post_id'))
-        return super().dispatch(request, *args, **kwargs)
     
     def form_valid(self, form):
         form.instance.author = self.request.user
         form.instance.post = self.post_to_comment
         return super().form_valid(form)
-    
-    def get_success_url(self):
-        return reverse('blog:post_detail', kwargs={'post_id': self.post_to_comment.pk})
-    
 
-class CommentDeleteView(LoginRequiredMixin, DeleteView):
-    model = Comment
+
+class CommentDeleteView(LoginRequiredMixin, CommentMixin, DeleteView):
+    """Удалить комментарий к публикации."""
+
     pk_url_kwarg = 'comment_id'
     template_name = 'blog/comment.html'
-    post_to_comment = None
-
-    def dispatch(self, request, *args, **kwargs) -> HttpResponse:
-        self.post_to_comment = get_object_or_404(filter_published_posts(Post.objects), pk=self.kwargs.get('post_id'))
-        return super().dispatch(request, *args, **kwargs)
-    
-    def get_success_url(self):
-        return reverse('blog:post_detail', kwargs={'post_id': self.post_to_comment.pk})
