@@ -150,6 +150,9 @@ media/
 
 sent_emails/
 
-.json
+db.json
+
+blogicum/db.json
 
 .static_dev/css/
+
