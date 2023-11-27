@@ -150,6 +150,6 @@ media/
 
 sent_emails/
 
-static_dev/css/
-
 .json
+
+.static_dev/css/
