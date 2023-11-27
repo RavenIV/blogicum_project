@@ -6,12 +6,14 @@ SECRET_KEY = 'django-insecure-q)j^%tin5at!ro&mue61b=w99$8*^j8=6#fa*(fa%w#oe=)o_z
 
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    'localhost',
+    '127.0.0.1',
+]
 
 INSTALLED_APPS = [
     'blog.apps.BlogConfig',
     'pages.apps.PagesConfig',
-    'users.apps.UsersConfig',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -108,3 +110,5 @@ LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'blog:index'
 
 MEDIA_ROOT = BASE_DIR / 'media' 
+
+CSRF_FAILURE_VIEW = 'pages.views.csrf_failure'

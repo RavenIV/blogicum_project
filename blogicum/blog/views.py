@@ -218,9 +218,17 @@ class CommentUpdateView(CommentFormValidMixin, UpdateView):
     pk_url_kwarg = 'comment_id'
     template_name = 'blog/comment.html'
 
+    def dispatch(self, request, *args, **kwargs):
+        get_object_or_404(Comment, pk=kwargs['comment_id'], author=request.user)
+        return super().dispatch(request, *args, **kwargs)
+
 
 class CommentDeleteView(CommentMixin, DeleteView):
     """Удалить комментарий к публикации."""
 
     pk_url_kwarg = 'comment_id'
     template_name = 'blog/comment.html'
+
+    def dispatch(self, request, *args, **kwargs):
+        get_object_or_404(Comment, pk=kwargs['comment_id'], author=request.user)
+        return super().dispatch(request, *args, **kwargs)
