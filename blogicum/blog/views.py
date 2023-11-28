@@ -1,7 +1,6 @@
 from datetime import datetime
 
 from django.db.models import Count
-from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import get_object_or_404, redirect
 from django.views.generic import (
@@ -9,11 +8,11 @@ from django.views.generic import (
 )
 from django.urls import reverse, reverse_lazy
 
-from .models import Category, Post, Comment
 from .forms import PostForm, CommentForm
+from .models import Category, Post, Comment, User
 
 
-User = get_user_model()
+PAGINATE_BY = 10
 
 
 def filter_published_posts(posts):
@@ -23,55 +22,53 @@ def filter_published_posts(posts):
             is_published=True,
             pub_date__lte=datetime.now(),
             category__is_published=True
-        )
+        ).annotate(comment_count=Count('comments'))
     )
 
 
-class ValidPosts(ListView):
+class PostsListMixin(ListView):
     model = Post
     ordering = ('-pub_date',)
-    paginate_by = 10
+    paginate_by = PAGINATE_BY
 
-    def get_queryset(self):
-        self.queryset = filter_published_posts(
-            Post.objects
-        ).annotate(comment_count=Count('comments'))
-        return super().get_queryset()
+    # def get_queryset(self):
+    #     self.queryset = filter_published_posts(
+    #         Post.objects
+    #     ).annotate(comment_count=Count('comments'))
+    #     return super().get_queryset()
 
 
-class IndexView(ValidPosts):
+class IndexView(PostsListMixin):
     """Показать ленту опубликованных постов."""
 
     template_name = 'blog/index.html'
+    queryset = filter_published_posts(Post.objects)
 
 
-class CategoryView(ValidPosts):
+class CategoryView(PostsListMixin):
     """Показать опубликованные посты конкретной категории."""
 
     template_name = 'blog/category.html'
-    category = None
 
-    def dispatch(self, request, *args, **kwargs):
-        self.category = get_object_or_404(
+    def get_object(self):
+        return get_object_or_404(
             Category,
             is_published=True,
             slug=self.kwargs.get('category_slug')
         )
-        return super().dispatch(request, *args, **kwargs)
 
     def get_queryset(self):
-        queryset = super().get_queryset()
-        return queryset.filter(
-            category__slug=self.category.slug
-        )
+        self.queryset = filter_published_posts(self.get_object().posts)
+        return super().get_queryset()
 
     def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['category'] = self.category
-        return context
+        return dict(
+            {'category': self.get_object()},
+            **super().get_context_data(**kwargs)
+        )
 
 
-class ProfileView(ValidPosts):
+class ProfileView(PostsListMixin):
     """
     Показать профиль автора и его опубликованные посты.
     Если это страница пользователя, показать все его посты.
