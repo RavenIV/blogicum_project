@@ -52,7 +52,9 @@ class CategoryView(PostsListMixin):
         )
 
     def get_queryset(self):
-        self.queryset = filter_published_posts(self.get_object().posts)
+        self.queryset = filter_published_posts(
+            self.get_object().posts
+        )
         return super().get_queryset()
 
     def get_context_data(self, **kwargs):
@@ -190,17 +192,15 @@ class BaseCommentMixin(LoginRequiredMixin):
         })
 
 
-class ValidCommentMixin(BaseCommentMixin):
+class ValidCommentAuthorMixin(BaseCommentMixin):
     pk_url_kwarg = 'comment_id'
     template_name = 'blog/comment.html'
 
-    def get_object(self):
-        return get_object_or_404(
-            Comment,
-            pk=self.kwargs['comment_id'],
-            post__pk=self.kwargs['post_id'],
-            author=self.request.user
-        )
+    def dispatch(self, request, *args, **kwargs):
+        comment = self.get_object()
+        if comment.author != request.user:
+            return redirect(comment.post)
+        return super().dispatch(request, *args, **kwargs)
 
 
 class CommentCreateView(BaseCommentMixin, CreateView):
@@ -208,22 +208,20 @@ class CommentCreateView(BaseCommentMixin, CreateView):
 
     template_name = 'blog/detail.html'
     fields = ('text',)
-    post_to_comment = None
 
-    def dispatch(self, request, *args, **kwargs):
-        self.post_to_comment = get_object_or_404(
+    def get_object(self):
+        return get_object_or_404(
             filter_published_posts(Post.objects),
             pk=self.kwargs.get('post_id')
         )
-        return super().dispatch(request, *args, **kwargs)
 
     def form_valid(self, form):
         form.instance.author = self.request.user
-        form.instance.post = self.post_to_comment
+        form.instance.post = self.get_object()
         return super().form_valid(form)
 
 
-class CommentUpdateView(ValidCommentMixin, UpdateView):
+class CommentUpdateView(ValidCommentAuthorMixin, UpdateView):
     """Редактировать комментарий к публикации."""
 
     fields = ('text',)
@@ -234,5 +232,5 @@ class CommentUpdateView(ValidCommentMixin, UpdateView):
         return super().form_valid(form)
 
 
-class CommentDeleteView(ValidCommentMixin, DeleteView):
+class CommentDeleteView(ValidCommentAuthorMixin, DeleteView):
     """Удалить комментарий к публикации."""
