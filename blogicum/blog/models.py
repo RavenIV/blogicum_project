@@ -103,7 +103,7 @@ class Post(PublishedModel):
         return (
             f'{super().__str__()}, '
             f'{self.title=:.30}, '
-            f'{self.text=:.15}..., '
+            f'{self.text=:.15}, '
             f'{self.pub_date=}, '
             f'{self.author=}, '
             f'{self.location=}, '
