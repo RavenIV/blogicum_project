@@ -31,12 +31,6 @@ class PostsListMixin(ListView):
     ordering = ('-pub_date',)
     paginate_by = PAGINATE_BY
 
-    # def get_queryset(self):
-    #     self.queryset = filter_published_posts(
-    #         Post.objects
-    #     ).annotate(comment_count=Count('comments'))
-    #     return super().get_queryset()
-
 
 class IndexView(PostsListMixin):
     """Показать ленту опубликованных постов."""
@@ -74,28 +68,28 @@ class ProfileView(PostsListMixin):
     Если это страница пользователя, показать все его посты.
     """
 
-    profile = None
     template_name = 'blog/profile.html'
 
-    def dispatch(self, request, *args, **kwargs):
-        self.profile = get_object_or_404(
+    def get_object(self):
+        return get_object_or_404(
             User, username=self.kwargs.get('username')
         )
-        return super().dispatch(request, *args, **kwargs)
 
     def get_queryset(self):
-        if self.profile == self.request.user:
-            return User.objects.get(
-                username=self.profile.username
-            ).posts.select_related('category', 'location')
+        profile = self.get_object()
+        if profile == self.request.user:
+            self.queryset = profile.posts.select_related(
+                'category', 'location'
+            ).annotate(comment_count=Count('comments'))
         else:
-            queryset = super().get_queryset()
-            return queryset.filter(author__username=self.profile.username)
+            self.queryset = filter_published_posts(profile.posts)
+        return super().get_queryset()
 
     def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['profile'] = self.profile
-        return context
+        return dict(
+            {'profile': self.get_object()},
+            **super().get_context_data(**kwargs)
+        )
 
 
 class PostDetailView(DetailView):
@@ -106,18 +100,19 @@ class PostDetailView(DetailView):
     pk_url_kwarg = 'post_id'
 
     def get_object(self):
-        if super().get_object().author == self.request.user:
-            return super().get_object()
+        post = super().get_object()
+        if post.author == self.request.user:
+            return post
         return get_object_or_404(
             filter_published_posts(Post.objects),
-            pk=self.kwargs['post_id']
+            pk=self.kwargs[self.pk_url_kwarg]
         )
 
     def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['form'] = CommentForm()
-        context['comments'] = self.object.comments.select_related('author')
-        return context
+        return dict({
+            'form': CommentForm(),
+            'comments': self.get_object().comments.select_related('author')
+        }, **super().get_context_data(**kwargs))
 
 
 class PostEditMixin(LoginRequiredMixin):
