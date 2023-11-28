@@ -8,13 +8,13 @@ class LocationChoiceField(ModelChoiceField):
 
     def label_from_instance(self, object):
         return f'{object.name}'
-    
+
 
 class CategoryChoiceField(ModelChoiceField):
 
     def label_from_instance(self, object):
         return f'{object.title}'
-    
+
 
 class PostForm(forms.ModelForm):
 
