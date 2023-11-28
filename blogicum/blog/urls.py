@@ -34,5 +34,7 @@ urlpatterns = [
     path('edit_profile/',
          views.UserUpdateView.as_view(),
          name='edit_profile'),
-    path('', views.IndexView.as_view(), name='index'),
+    path('',
+         views.IndexView.as_view(),
+         name='index'),
 ]
