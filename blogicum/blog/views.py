@@ -59,7 +59,7 @@ class CategoryView(PostsListMixin):
 
     def get_context_data(self, **kwargs):
         return dict(
-            {'category': self.get_object()},
+            category=self.get_object(),
             **super().get_context_data(**kwargs)
         )
 
@@ -89,7 +89,7 @@ class ProfileView(PostsListMixin):
 
     def get_context_data(self, **kwargs):
         return dict(
-            {'profile': self.get_object()},
+            profile=self.get_object(),
             **super().get_context_data(**kwargs)
         )
 
@@ -111,10 +111,11 @@ class PostDetailView(DetailView):
         )
 
     def get_context_data(self, **kwargs):
-        return dict({
-            'form': CommentForm(),
-            'comments': self.get_object().comments.select_related('author')
-        }, **super().get_context_data(**kwargs))
+        return dict(
+            form=CommentForm(),
+            comments=self.get_object().comments.select_related('author'),
+            **super().get_context_data(**kwargs)
+        )
 
 
 class PostEditMixin(LoginRequiredMixin):
@@ -225,11 +226,6 @@ class CommentUpdateView(ValidCommentAuthorMixin, UpdateView):
     """Редактировать комментарий к публикации."""
 
     fields = ('text',)
-
-    def form_valid(self, form):
-        form.instance.author = self.request.user
-        form.instance.post = self.get_object().post
-        return super().form_valid(form)
 
 
 class CommentDeleteView(ValidCommentAuthorMixin, DeleteView):
