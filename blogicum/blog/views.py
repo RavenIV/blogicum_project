@@ -1,7 +1,7 @@
 from datetime import datetime
 
-from django.db.models import Count
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db.models import Count
 from django.shortcuts import get_object_or_404, redirect
 from django.views.generic import (
     CreateView, DeleteView, DetailView, ListView, UpdateView
@@ -22,7 +22,9 @@ def filter_published_posts(posts):
             is_published=True,
             pub_date__lte=datetime.now(),
             category__is_published=True
-        ).annotate(comment_count=Count('comments'))
+        ).annotate(
+            comment_count=Count('comments')
+        ).order_by('-pub_date')
     )
 
 
@@ -52,10 +54,9 @@ class CategoryView(PostsListMixin):
         )
 
     def get_queryset(self):
-        self.queryset = filter_published_posts(
+        return filter_published_posts(
             self.get_object().posts
         )
-        return super().get_queryset()
 
     def get_context_data(self, **kwargs):
         return dict(
