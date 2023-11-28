@@ -137,9 +137,12 @@ class PostValidAuthorMixin:
     pk_url_kwarg = 'post_id'
 
     def dispatch(self, request, *args, **kwargs):
-        instance = get_object_or_404(Post, pk=kwargs['post_id'])
-        if instance.author != request.user:
-            return redirect(instance)
+        post = get_object_or_404(
+            Post,
+            pk=kwargs[self.pk_url_kwarg]
+        )
+        if post.author != request.user:
+            return redirect(post)
         return super().dispatch(request, *args, **kwargs)
 
 
