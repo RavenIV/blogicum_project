@@ -173,11 +173,11 @@ class UserUpdateView(LoginRequiredMixin, UpdateView):
     template_name = 'blog/user.html'
 
     def get_object(self):
-        return get_object_or_404(User, username=self.request.user)
+        return self.request.user
 
     def get_success_url(self):
         return reverse('blog:profile', kwargs={
-            'username': self.request.user
+            'username': self.request.user.username
         })
 
 
