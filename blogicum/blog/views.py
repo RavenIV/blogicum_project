@@ -15,24 +15,23 @@ from .models import Category, Post, Comment, User
 PAGINATE_BY = 10
 
 
-def filter_published_posts(posts, filter_required=True):
-    valid_posts = posts.select_related(
+def filter_published_posts(posts, use_filter=True):
+    posts = posts.select_related(
         'location', 'category', 'author'
     ).annotate(
         comment_count=Count('comments')
     ).order_by('-pub_date')
-    if filter_required:
-        return valid_posts.filter(
+    if use_filter:
+        posts = posts.filter(
             is_published=True,
             pub_date__lte=datetime.now(),
             category__is_published=True
         )
-    return valid_posts
+    return posts
 
 
 class PostsListMixin(ListView):
     model = Post
-    ordering = ('-pub_date',)
     paginate_by = PAGINATE_BY
 
 
@@ -82,12 +81,9 @@ class ProfileView(PostsListMixin):
 
     def get_queryset(self):
         profile = self.get_object()
-        only_published_posts = True
-        if profile == self.request.user:
-            only_published_posts = False
         return filter_published_posts(
             profile.posts,
-            only_published_posts
+            profile != self.request.user
         )
 
     def get_context_data(self, **kwargs):
