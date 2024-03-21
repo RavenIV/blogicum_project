@@ -14,8 +14,8 @@
 Клонировать репозиторий и перейти в него в командной строке:
 
 ```
-git@github.com:RavenIV/blogicum.git
-cd django_sprint4
+git@github.com:RavenIV/blogicum_project.git
+cd blogicum_project
 ```
 
 Создать и активировать виртуальное окружение:
