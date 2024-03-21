@@ -14,7 +14,7 @@
 Клонировать репозиторий и перейти в него в командной строке:
 
 ```
-git clone git@github.com:RavenIV/django_sprint4.git
+git@github.com:RavenIV/blogicum.git
 cd django_sprint4
 ```
 
