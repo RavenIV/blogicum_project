@@ -17,13 +17,6 @@ class PublishedModel(models.Model):
     class Meta:
         abstract = True
 
-    def __str__(self):
-        return (
-            f'{self.pk=}, '
-            f'{self.is_published=}, '
-            f'{self.created_at=}'
-        )
-
 
 class Location(PublishedModel):
     name = models.CharField('Название места', max_length=256)
@@ -32,8 +25,15 @@ class Location(PublishedModel):
         verbose_name = 'местоположение'
         verbose_name_plural = 'Местоположения'
 
+    def __repr__(self):
+        return (
+            f'<Location: {self.pk=} '
+            f'{self.name=:.50} {self.is_published=}'
+            f'{self.created_at=}>'
+        )
+
     def __str__(self):
-        return f'{super().__str__()}, {self.name=:.30}'
+        return f"{self.name:.50}"
 
 
 class Category(PublishedModel):
@@ -52,13 +52,16 @@ class Category(PublishedModel):
         verbose_name = 'категория'
         verbose_name_plural = 'Категории'
 
-    def __str__(self):
+    def __repr__(self):
         return (
-            f'{super().__str__()}, '
-            f'{self.title=:.30}, '
-            f'{self.description=:.15}..., '
-            f'{self.slug=}'
+            f'<Category: {self.pk=} '
+            f'{self.title=:.50} {self.slug=} '
+            f'{self.is_published=} '
+            f'{self.created_at=}>'
         )
+
+    def __str__(self):
+        return f"{self.title:.50}"
 
 
 class Post(PublishedModel):
@@ -99,16 +102,16 @@ class Post(PublishedModel):
         ordering = ('-pub_date',)
         default_related_name = 'posts'
 
-    def __str__(self):
+    def __repr__(self):
         return (
-            f'{super().__str__()}, '
-            f'{self.title=:.30}, '
-            f'{self.text=:.15}, '
-            f'{self.pub_date=}, '
-            f'{self.author=}, '
-            f'{self.location=}, '
-            f'{self.category=}'
+            f'<Post: {self.pk=} '
+            f'{self.title=:.50} '
+            f'{self.is_published=} '
+            f'{self.created_at=}>'
         )
+
+    def __str__(self):
+        return f"{self.title:.50}"
 
     def get_absolute_url(self):
         return reverse('blog:post_detail', kwargs={'post_id': self.pk})
@@ -133,3 +136,9 @@ class Comment(models.Model):
         verbose_name_plural = 'Комментарии'
         ordering = ('created_at',)
         default_related_name = 'comments'
+
+    def __repr__(self):
+        return f'<Comment: {self.pk=} {self.created_at=} {self.text=:.50}>'
+
+    def __str__(self):
+        return f'{self.text:.50}'
